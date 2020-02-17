@@ -1,0 +1,20 @@
+---
+- name: Set up htpasswd
+  hosts: localhost
+  vars:
+    homedir: "{{ lookup('ENV', 'HOME') }}"  
+  tasks:
+  roles:
+    - htpasswd
+
+#- name: Configure DNS
+#  hosts: localhost
+#  tasks:
+#  roles:
+#    - dns
+#
+#- name: Set up new project
+#  hosts: localhost
+#  tasks:
+#  roles:
+#    - new-project

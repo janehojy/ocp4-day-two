@@ -1,0 +1,14 @@
+---
+# vars file for htpasswd
+
+htpasswd_file_path: "{{ homedir }}/htpasswd/htpasswd"
+htpasswd_cr_path: "{{ homedir }}/htpasswd/htpasswd-cr.yaml"
+
+
+htpasswd_credentials:
+  - name: admin
+    password: redhat
+  - name: user1
+    password: redhat
+  - name: user2
+    password: redhat

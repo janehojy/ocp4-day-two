@@ -1,0 +1,38 @@
+---
+# tasks file for htpasswd
+
+- name: Ensure the htpasswd utility is installed.
+  yum:
+    name: 
+      - httpd-tools
+      - python-passlib
+    state: present
+
+- name: Ensure htpasswd credentials are configured.
+  htpasswd:
+    path: "{{ htpasswd_file_path }}"
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+  loop: "{{ htpasswd_credentials }}"
+
+- name: Create OCP secret
+  shell: "oc create secret generic htpasswd --from-file=htpasswd={{ htpasswd_file_path }} -n openshift-config"
+
+- name: Create OAuth CR for htpasswd
+  template: 
+    src: templates/htpasswd-cr.j2
+    dest: "{{ htpasswd_cr_path }}"
+
+- name: Apply OAuth CR 
+  shell: "oc apply -f {{ htpasswd_cr_path }}"
+
+#- name: Wait for oauth-openshift pod to redeploy
+#  pause: 
+#    seconds: 20
+#
+#- shell: "oc whoami --show-server"
+#  register: api_server
+#
+#- name: Attempt to login as htpasswd user
+#  shell: "oc login -u {{ item.name }} -p {{ item.password }} {{ api_server }}"
+#  with_items: "{{ htpasswd_credentials }}"
