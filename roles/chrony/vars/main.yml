@@ -1,0 +1,9 @@
+---
+# vars file for chrony
+
+ntp_servers:
+  - clock.redhat.com
+
+chrony_dir: "{{ lookup('ENV', 'HOME') }}/chrony"
+chrony_master_mc_path: "{{ chrony_dir }}/99_masters-chrony-configuration.yaml"
+chrony_worker_mc_path: "{{ chrony_dir }}/99_workers-chrony-configuration.yaml"

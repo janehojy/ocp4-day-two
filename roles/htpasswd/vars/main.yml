@@ -1,9 +1,7 @@
 ---
-# vars file for htpasswd
-
-htpasswd_file_path: "{{ homedir }}/htpasswd/htpasswd"
-htpasswd_cr_path: "{{ homedir }}/htpasswd/htpasswd-cr.yaml"
-
+htpasswd_dir: "{{ lookup('ENV', 'HOME') }}/htpasswd"
+htpasswd_file_path: "{{ lookup('ENV', 'HOME') }}/htpasswd/htpasswd"
+htpasswd_cr_path: "{{ lookup('ENV', 'HOME') }}/htpasswd/htpasswd-cr.yaml"
 
 htpasswd_credentials:
   - name: admin

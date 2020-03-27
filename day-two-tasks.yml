@@ -1,20 +1,25 @@
 ---
+- name: Configure OCP day two tasks
+  hosts: localhost
+  become: false
+  gather_facts: false
+  
+  tasks:
+  - name: Set python3
+    set_fact:
+      ansible_python_interpreter: /usr/bin/python3
+
 - name: Set up htpasswd
   hosts: localhost
-  vars:
-    homedir: "{{ lookup('ENV', 'HOME') }}"  
-  tasks:
   roles:
     - htpasswd
 
-#- name: Configure DNS
-#  hosts: localhost
-#  tasks:
-#  roles:
-#    - dns
-#
-#- name: Set up new project
-#  hosts: localhost
-#  tasks:
-#  roles:
-#    - new-project
+- name: Configure chrony timeserver
+  hosts: localhost
+  roles:
+    - chrony
+
+- name: Configure multitenant NetworkPolicy
+  hosts: localhost
+  roles:
+    - networkpolicy

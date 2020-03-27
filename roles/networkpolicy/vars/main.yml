@@ -1,0 +1,6 @@
+---
+# vars file for networkpolicy
+
+networkpolicy_dir: "{{ lookup('ENV', 'HOME') }}/networkpolicy"
+networkpolicy_path: "{{ networkpolicy_dir }}/multitenant-nwpolicy.yaml"
+

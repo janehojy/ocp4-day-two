@@ -1,0 +1,29 @@
+---
+# tasks file for chrony
+
+- name: Create chrony directory
+  file:
+    path: "{{ chrony_dir }}"
+    state: directory
+
+- name: Create MachineConfig for Master
+  template:
+    src: templates/99_masters-chrony-configuration.yaml.j2
+    dest: "{{ chrony_master_mc_path }}"
+
+- name: Create MachineConfig for Worker
+  template:
+    src: templates/99_workers-chrony-configuration.yaml.j2
+    dest: "{{ chrony_worker_mc_path }}"
+
+- name: Apply MachineConfig for Master
+  shell: "oc apply -f {{ chrony_master_mc_path }}"
+
+- name: Apply MachineConfig for Worker
+  shell: "oc apply -f {{ chrony_worker_mc_path }}"
+
+- name: Check that MC is rolling out
+  pause: 
+    seconds: 15
+
+- shell: "oc get nodes"

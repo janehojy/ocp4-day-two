@@ -8,6 +8,11 @@
       - python-passlib
     state: present
 
+- name: Create htpasswd directory
+  file:
+    path: "{{ htpasswd_dir }}"
+    state: directory
+
 - name: Ensure htpasswd credentials are configured.
   htpasswd:
     path: "{{ htpasswd_file_path }}"
@@ -16,7 +21,7 @@
   loop: "{{ htpasswd_credentials }}"
 
 - name: Create OCP secret
-  shell: "oc create secret generic htpasswd --from-file=htpasswd={{ htpasswd_file_path }} -n openshift-config"
+  shell: "oc create secret generic htpass-secret --from-file=htpasswd={{ htpasswd_file_path }} -n openshift-config"
 
 - name: Create OAuth CR for htpasswd
   template: 
