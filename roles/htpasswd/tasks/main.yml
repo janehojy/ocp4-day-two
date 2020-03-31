@@ -1,35 +1,53 @@
 ---
 # tasks file for htpasswd
 
-- name: Ensure the htpasswd utility is installed.
-  yum:
-    name: 
-      - httpd-tools
-      - python-passlib
-    state: present
+- name: Set python3
+  set_fact:
+    ansible_python_interpreter: /usr/bin/python3
+
+#- name: Ensure the htpasswd utility is installed
+#  yum:
+#    name: 
+#      - httpd-tools
+#      - python-passlib
+#    state: present
 
 - name: Create htpasswd directory
   file:
     path: "{{ htpasswd_dir }}"
     state: directory
 
-- name: Ensure htpasswd credentials are configured.
+- name: Ensure htpasswd credentials are configured
   htpasswd:
     path: "{{ htpasswd_file_path }}"
     name: "{{ item.name }}"
     password: "{{ item.password }}"
   loop: "{{ htpasswd_credentials }}"
 
+#- name: Create OCP secret
+#  shell: "oc create secret generic htpass-secret --from-file=htpasswd={{ htpasswd_file_path }} -n openshift-config"
+
 - name: Create OCP secret
-  shell: "oc create secret generic htpass-secret --from-file=htpasswd={{ htpasswd_file_path }} -n openshift-config"
+  k8s:
+    state: present
+    definition: "{{ lookup('template', 'htpasswd-secret.yaml.j2') }}"
 
 - name: Create OAuth CR for htpasswd
-  template: 
-    src: templates/htpasswd-cr.j2
-    dest: "{{ htpasswd_cr_path }}"
-
-- name: Apply OAuth CR 
-  shell: "oc apply -f {{ htpasswd_cr_path }}"
+  k8s:
+    state: present
+    definition:
+      apiVersion: config.openshift.io/v1
+      kind: OAuth
+      metadata:
+        name: cluster
+      spec:
+        identityProviders:
+        - name: my_htpasswd_provider
+          mappingMethod: claim
+          type: HTPasswd
+          htpasswd:
+            fileData:
+              name: htpass-secret
 
 #- name: Wait for oauth-openshift pod to redeploy
 #  pause: 

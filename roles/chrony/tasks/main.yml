@@ -6,24 +6,143 @@
     path: "{{ chrony_dir }}"
     state: directory
 
+# 1. get a list of the machineconfigs and store them in r_existing_machineconfig
+
+- name: Retrieve existing MachineConfigs
+  k8s_facts:
+    api_version: machineconfiguration.openshift.io/v1
+    kind: MachineConfig
+  register: r_existing_machineconfig
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'HOME') }}/openstack-upi/auth/kubeconfig"
+
+#- name: Register r_existing_count_machineconfig
+#  set_fact:
+#    r_existing_count_machineconfig: "{{ r_existing_machineconfig | json_query('resources[?metadata.ownerReferences.\"apiVersion\"==\"machineconfiguration.openshift.io/v1\"].metadata.name') | length }}"
+#
+#- debug:
+#    var: r_existing_count_machineconfig
+
+# 2. Create new chrony machineconfig
+
 - name: Create MachineConfig for Master
-  template:
-    src: templates/99_masters-chrony-configuration.yaml.j2
-    dest: "{{ chrony_master_mc_path }}"
+  k8s:
+    state: present
+    definition: "{{ lookup('file', 'files/99_masters-chrony-configuration.yaml') }}"
 
 - name: Create MachineConfig for Worker
-  template:
-    src: templates/99_workers-chrony-configuration.yaml.j2
-    dest: "{{ chrony_worker_mc_path }}"
+  k8s:
+    state: present
+    definition: "{{ lookup('file', 'files/99_masters-chrony-configuration.yaml') }}"
 
-- name: Apply MachineConfig for Master
-  shell: "oc apply -f {{ chrony_master_mc_path }}"
+# 3. Get a new list of the machineconfigs and store them in r_new_machineconfig and run an until loop over them until you see the new rendered configs
 
-- name: Apply MachineConfig for Worker
-  shell: "oc apply -f {{ chrony_worker_mc_path }}"
+- name: Retrieve new MachineConfigs
+  k8s_facts:
+    api_version: machineconfiguration.openshift.io/v1
+    kind: MachineConfig
+  register: r_new_machineconfig
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'HOME') }}/openstack-upi/auth/kubeconfig"
+  vars:
+    existing_machineconfig_list: "{{ r_existing_machineconfig.resources | map(attribute='spec.configuration.name') | list }}"
+    new_machineconfig_list: "{{ r_new_machineconfig.resources | map(attribute='spec.configuration.name') | list }}"
+  until:
+    - existing_machineconfig_list | intersect(new_machineconfig_list) | length == 0
+  retries: 20
+  delay: 10
 
-- name: Check that MC is rolling out
-  pause: 
-    seconds: 15
+#- name: Register r_new_count_machineconfig
+#  set_fact:
+#    r_new_count_machineconfig: "{{ r_new_machineconfig | json_query('resources[?metadata.ownerReferences.\"apiVersion\"==\"machineconfiguration.openshift.io/v1\"].metadata.name') | length }}"
+#
+#- debug:
+#    var: r_new_count_machineconfig
 
-- shell: "oc get nodes"
+
+# 4. Get a list of nodes and store them in r_node_existing_machineconfig and loop through them until you see desired == new rendered
+
+- name: Retrieve nodes
+  k8s_facts:
+    api_version: v1
+    kind: Node
+  register: r_check_nodes
+  environment:
+    KUBECONFIG: "{{ lookup('env', 'HOME') }}/openstack-upi/auth/kubeconfig"
+
+- debug:
+    var: r_check_nodes
+
+### TODO: master_new_config var
+
+- name: Check that master nodes have desiredConfig == new rendered
+  k8s_facts:
+    api_version: v1
+    kind: Node
+    label_selectors:
+    - node-role.kubernetes.io/master
+  register: r_check_nodes
+  retries: 20
+  delay: 30
+  until:
+    - r_check_nodes.resources | json_query(master_desired_config) == master_new_config 
+  vars:
+    master_desired_config: >-
+      [?metadata.annotations."machineconfiguration.openshift.io/desiredConfig"]
+
+### TODO: worker_new_config var
+
+- name: Check that worker nodes have desiredConfig == new rendered
+  k8s_facts:
+    api_version: v1
+    kind: Node
+    label_selectors:
+    - node-role.kubernetes.io/worker
+  register: r_check_nodes
+  retries: 20
+  delay: 30
+  until:
+    - r_check_nodes.resources | json_query(worker_desired_config) | length == worker_new_config
+  vars:
+    worker_desired_config: >-
+      [?metadata.annotations."machineconfiguration.openshift.io/desiredConfig"]
+
+## TODO: check for current==desired
+
+- name: Check that master nodes have currentConfig == desiredConfig
+  k8s_facts:
+    api_version: v1
+    kind: Node
+    label_selectors:
+    - node-role.kubernetes.io/master
+  register: r_check_nodes
+  retries: 20
+  delay: 30
+  until:
+    - r_check_nodes.resources | json_query(master_current_config) == r_check_nodes.resources | json_query(master_desired_config)
+  vars:
+    master_desired_config: >-
+      [?metadata.annotations."machineconfiguration.openshift.io/desiredConfig"]
+    master_current_config: >-
+      [?metadata.annotations."machineconfiguration.openshift.io/currentConfig"]
+
+## TODO: check for current==desired
+
+- name: Check that worker nodes have currentConfig == desiredConfig
+  k8s_facts:
+    api_version: v1
+    kind: Node
+    label_selectors:
+    - node-role.kubernetes.io/worker
+  register: r_check_nodes
+  retries: 20
+  delay: 30
+  until:
+    - r_check_nodes.resources | json_query(worker_current_config) == r_check_nodes.resources | json_query(worker_desired_config)
+  vars:
+    worker_desired_config: >-
+      [?metadata.annotations."machineconfiguration.openshift.io/desiredConfig"]
+    worker_current_config: >-
+      [?metadata.annotations."machineconfiguration.openshift.io/currentConfig"]
+
+

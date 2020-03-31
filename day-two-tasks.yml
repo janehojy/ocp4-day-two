@@ -4,22 +4,19 @@
   become: false
   gather_facts: false
   
-  tasks:
+  pre_tasks:
+# add check to see if python3 is installed
   - name: Set python3
     set_fact:
       ansible_python_interpreter: /usr/bin/python3
 
-- name: Set up htpasswd
-  hosts: localhost
+  - name: Set kubeconfig env var
+    lineinfile:
+      path: $HOME/.bashrc
+      regexp: "^export KUBECONFIG"
+      line: "export KUBECONFIG=$HOME/openstack-upi/auth/kubeconfig" 
+
   roles:
     - htpasswd
-
-- name: Configure chrony timeserver
-  hosts: localhost
-  roles:
     - chrony
-
-- name: Configure multitenant NetworkPolicy
-  hosts: localhost
-  roles:
     - networkpolicy

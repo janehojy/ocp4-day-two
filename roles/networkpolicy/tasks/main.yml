@@ -7,8 +7,8 @@
     state: directory
 
 - name: Create multitenant networkpolicy 
-  template:
-    src: templates/multitenant-nwpolicy.yaml.j2
+  copy:
+    src: files/multitenant-nwpolicy.yaml
     dest: "{{ networkpolicy_path }}"
 
 - name: Check if default namespace if needs to be labeled
@@ -19,8 +19,8 @@
     namespace: openshift-ingress-operator
   register: default_ic
 
-- debug:
-    var: default_ic
+#- debug:
+#    var: default_ic
 
 - name: Register endpointPublishingStrategy
   set_fact: 
@@ -35,12 +35,12 @@
   ignore_errors: yes
 
 - name: Retrieve default project template
-  shell: "oc adm create-bootstrap-project-template -o yaml > template.yaml"
+  shell: "oc adm create-bootstrap-project-template -o yaml > $HOME/ocp4-day-two/roles/networkpolicy/files/template.yaml"
 
 - name: Append networkpolicy to template
   blockinfile:
-    path: template.yaml
-    block: "{{ lookup('template', 'multitenant-nwpolicy.yaml.j2') }}"
+    path: $HOME/ocp4-day-two/roles/networkpolicy/files/template.yaml
+    block: "{{ lookup('file', 'multitenant-nwpolicy.yaml') }}"
     insertbefore: "parameters:"
 
 - name: Create project template in openshift-config ns
@@ -48,8 +48,8 @@
     state: present
     definition: "{{ lookup('file', 'template.yaml') }}"
     namespace: openshift-config
-  ignore_errors: yes
 
+# oc edit project.config.openshift.io/cluster
 - name: Edit project config resource 
   k8s:
     state: present
@@ -62,9 +62,6 @@
         projectRequestTemplate:
           name: project-request
 
-#- pause:
-#    seconds: 20
-#
 #- name: Create a test project
 #  k8s:
 #    name: test
