@@ -2,8 +2,8 @@ apiVersion: machineconfiguration.openshift.io/v1
 kind: MachineConfig
 metadata:
   labels:
-    machineconfiguration.openshift.io/role: master
-  name: masters-chrony-configuration
+    machineconfiguration.openshift.io/role: worker
+  name: 99-workers-chrony-configuration
 spec:
   config:
     ignition:
