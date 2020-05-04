@@ -49,6 +49,9 @@
             fileData:
               name: htpass-secret
 
+- name: Add cluster-admin to admin user
+  shell: "oc adm policy add-cluster-role-to-user cluster-admin admin"
+
 #- name: Wait for oauth-openshift pod to redeploy
 #  pause: 
 #    seconds: 20
